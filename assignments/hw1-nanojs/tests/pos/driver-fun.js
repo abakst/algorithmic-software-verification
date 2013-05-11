@@ -11,20 +11,27 @@ function pos(){
 }
 
 function create(){
+  ensures($result == 0);
   return 0;
 }
 
 function acquire(l){
+  requires(l == 0);
+  ensures($result == 1);
   assert(l==0);
   return 1;
 }
 
 function release(l){
+  requires(l == 1);
+  ensures($result == 0);
   assert(l==1);
   return 0;
 }
 
 function driver(l0, newCount0, oldCount0){
+  requires((newCount0 < oldCount0 && l0 == 0) || (newCount0 == oldCount0 && l0 == 1));
+  ensures($result == 1);
   var l        = l0;
   var newCount = newCount0;
   var oldCount = oldCount0;
