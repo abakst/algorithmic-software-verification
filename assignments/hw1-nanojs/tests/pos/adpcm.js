@@ -9,6 +9,13 @@ function adpcm(n){
   var bufferstep = 1;
   var len        = nsamples;
   while (0 < len) {
+    invariant(inp0  == 0);
+    invariant(outp0 == 0);
+    invariant(inp0 <= inp);
+    invariant(outp0 <= outp);
+    invariant(inp == nsamples - len);
+    invariant((bufferstep == 0) || (bufferstep == 1));
+    invariant((2*outp - bufferstep) < inp);
     assert((inp0 <= inp) && (inp  <  inp0 + nsamples));
     inp = inp + 1;
     if (bufferstep == 0){
