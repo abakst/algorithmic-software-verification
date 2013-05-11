@@ -124,3 +124,32 @@ a loop invariant:
 
 $$\frac{ \vdash \{ I \  \&\& \  b \} c \{ I \} }{ \vdash \{ I \} \text{ while b do c } \{ I \  \&\& \  !b \} }$$
 
+## While example
+
+Take as an example
+
+    { x = 0 } while x <= 5 do x := x + 1 { x = 6 }
+
+Recalling the rule for while loops, 
+
+$$\frac{ \vdash \{ I \  \&\& \  b \} c \{ I \} }{ \vdash \{ I \} \text{ while b do c } \{ I \  \&\& \  !b \} }$$
+
+we need to "guess" a suitable I
+
+## While example (loop invariants)
+
+Guess `x <= 6`. Now check, writing out the proof tree.
+   
+$$
+\frac{
+    \frac{
+      \vdash \{\text{x $\leq$ 6 } \&\& \ \text{x $\leq$ 5}\} \text{ x := x + 1 } \{ \text{x $\leq$ 6} \}
+    }
+    {
+      \vdash \{ \text{x $\leq$ 6 } \} \text{while x $\leq$ 5 do x := x + 1 } \{ \text{x $\leq$ 6} \&\& \ \text{x $>$ 5} \}
+    }
+}
+{
+    \vdash \{ \text{x $\leq$ 6 } \} \text{while x $\leq$ 5 do x := x + 1 } \{ \text{x = 6} \}
+}
+$$

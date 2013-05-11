@@ -74,7 +74,7 @@ instance IsVerifiable (Fun SourcePos) where
   generateVC fn _   = generateFunVC fn
 
 instance IsVerifiable a => IsVerifiable [a] where 
-  generateVC xs vc  = errorstar "FILL THIS IN 1"
+  generateVC xs vc  = foldM (flip generateVC) vc (reverse xs)
 
 instance IsVerifiable (Statement SourcePos) where 
   generateVC        = generateStmtVC
@@ -111,7 +111,12 @@ generateStmtVC (BlockStmt _ ss) vc
 
 -- if b { s1 } else { s2 }
 generateStmtVC (IfStmt _ b s1 s2) vc 
-  = errorstar "FILL THIS IN 2"
+  = do vcs1 <- generateStmtVC s1 vc
+       vcs2 <- generateStmtVC s2 vc
+       return (g vcs1 <> notg vcs2)
+    where
+      g = fmap (F.PImp (F.prop b))
+      notg = fmap (F.PImp (F.PNot (F.prop b)))
 
 -- if b { s1 }
 generateStmtVC (IfSingleStmt l b s) vc
@@ -119,7 +124,14 @@ generateStmtVC (IfSingleStmt l b s) vc
 
 -- while (cond) { s }
 generateStmtVC (WhileStmt l cond s) vc 
-  = errorstar "FILL THIS IN 3"  
+  = do vc1 <- generateVC s ivc
+       addSideCond (fmap ((F.pAnd [i,b]) `F.PImp`) vc1)
+       addSideCond (fmap ((F.pAnd [i,(F.PNot b)]) `F.PImp`) vc)
+       return ivc
+   where 
+     i = getInvariant s
+     b = F.prop cond
+     ivc = newVCond l i
   
 -- var x1 [ = e1 ]; ... ; var xn [= en];
 generateStmtVC (VarDeclStmt _ ds) vc
@@ -165,14 +177,15 @@ generateAsgnVC _ x e  vc
 -----------------------------------------------------------------------------------
 
 generateAssumeVC :: F.Pred -> VCond -> VCM VCond 
-generateAssumeVC = errorstar "FILL THIS IN 4" 
+generateAssumeVC pred vc = return $ fmap (F.PImp (F.prop pred)) vc
 
 generateAssertVC :: SourcePos -> F.Pred -> VCond -> VCM VCond 
-generateAssertVC = errorstar "FILL THIS IN 5" 
+generateAssertVC s p v = return (vc1 <> v)
+  where vc1 = newVCond s (F.prop p)
 
 -- x = e; // where e is not a function call
 generateExprAsgnVC :: (F.Symbolic x, F.Expression e) => x -> e -> VCond -> VCM VCond 
-generateExprAsgnVC = errorstar "FILL THIS IN 6"
+generateExprAsgnVC x e = return . fmap (F.subst (F.mkSubst [(F.symbol x, F.expr e)]))
 
 -- Do the next two last: You can knock off all the tests **WITHOUT**
 -- function calls (other than the spec calls -- invariant, assert, assume)
@@ -180,9 +193,19 @@ generateExprAsgnVC = errorstar "FILL THIS IN 6"
 
 -- x = f(e1,...,en)
 generateFunAsgnVC :: (F.Symbolic x, F.Expression e) => SourcePos -> x -> String -> [e] -> VCond -> VCM VCond 
-generateFunAsgnVC = errorstar "FILL THIS IN 7"
+generateFunAsgnVC l x s es vc = do
+  spec <- getCalleeSpec s
+  let sub  = zip (map F.symbol (fargs spec)) (map F.expr es)
+  let pre  = F.subst (F.mkSubst sub) (fpre spec)
+  let post = F.subst (F.mkSubst ((returnSymbol, (F.expr . F.symbol) x):sub)) (fpost spec) 
+  vc <- generateAssumeVC post vc
+  generateAssertVC l pre vc
+ -- generateAssertVC l pre <=< generateAssumeVC post vc
 
 -- return e
 generateReturnVC :: SourcePos-> Expression SourcePos -> VCond-> VCM VCond
-generateReturnVC = errorstar "FILL THIS IN 8"
+generateReturnVC l e vc = do
+  vcpost <- getFunctionPostcond
+  return $ (vc <> newVCond l  (F.subst sub vcpost))
+  where sub = F.mkSubst [(returnSymbol, F.expr e)]
 
